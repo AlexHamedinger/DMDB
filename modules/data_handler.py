@@ -54,3 +54,30 @@ def update_database(db_collection, data):
         db_collection.replace_one({"_id": document["_id"]},document)
         update_count = update_count + 1
     print("Updated " + str(update_count) + " documents in " + db_collection.full_name)    
+
+#cleans the field phone
+def clean_phone(db_collection):
+    pipeline = [
+                {'$match': {'phone': {'$regex': '[0-9]{3}/[0-9]{3}-[0-9]{4}'}}}
+               ]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        phone = row["phone"].split("/")
+        row["phone"] = phone[0] + "-" + phone[1]
+    update_database(db_collection, data)
+    print("Cleaned the field phone")
+    
+#cleans the field city
+def clean_city(db_collection):
+    pipeline = [{'$match': {'city': 'la'}}]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        row["city"] = "los angeles"
+    update_database(db_collection,data)
+    
+    pipeline = [{'$match': {'city': 'new york city'}}]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        row["city"] = "new york"
+    update_database(db_collection,data)
+    print("Cleaned the field city")
