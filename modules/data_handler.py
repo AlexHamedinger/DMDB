@@ -93,7 +93,7 @@ def clean_address(db_collection):
         if postcode != []:
             postcode = postcode[0]
         streetname = address[len(postcode): 11 + len(postcode)].lstrip()
-        address_key = postcode + streetname
+        address_key = str(postcode) + str(streetname)
         #address_tupel = [{"postcode": postcode}, {"streetname": streetname}]
         row["address"] = address_key
         
@@ -170,5 +170,39 @@ def safe_store_duplicates(db_collection, duplicates):
         old_duplicates.append(document)
     for document in old_duplicates:
         db_collection.insert_one(document)
+         
+#compares the given duplicates with my duplicates
+def compare_duplicates(db_given_duplicates, db_my_duplicates):
+    
+    correctly_recognized_duplicates = []
+    incorrectly_recognized_duplicates = []
+    unrecognised_duplicates = []
+    
+    #gets the duplicates from the database
+    pipeline = [{'$project': {'_id': 0, 
+                              'id_1': 1, 
+                              'id_2': 1}}
+               ]
+    my_dupl = list(db_my_duplicates.aggregate(pipeline))
+    given_dupl = list(db_given_duplicates.aggregate(pipeline))
+    print("\nrecognized duplicates: " + str(len(my_dupl)))
+    for my_doc in my_dupl:
+        if my_doc in given_dupl:
+            correctly_recognized_duplicates.append(my_doc)
+        elif my_doc not in given_dupl:
+            incorrectly_recognized_duplicates.append(my_doc)
+    
+    for giv_doc in given_dupl:
+        if giv_doc not in my_dupl:
+            unrecognised_duplicates.append(giv_doc)
+            
+    print("\ncorrectly recognized duplicates: (length: " + str(len(correctly_recognized_duplicates)) + ")")
+    print("\nincorrectly_recognized_duplicates: (length: " + str(len(incorrectly_recognized_duplicates)) + ")")
+    for doc in incorrectly_recognized_duplicates:
+        print(str(doc))
+    print("\nunrecognised_duplicates: (length: " + str(len(unrecognised_duplicates)) + ")")
+    for doc in unrecognised_duplicates:
+        print(str(doc))
         
-       
+    
+    
