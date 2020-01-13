@@ -107,7 +107,7 @@ def clean_address(db_collection):
         streetname = address[len(postcode):].lstrip()
         if re.findall("^[wesn][.]\s", streetname):
             streetname = streetname[3:]
-        streetname = streetname[ :11].strip()
+        streetname = streetname[ :5].strip()
         
         address_key = str(postcode) + " " + str(streetname)
         #address_tupel = [{"postcode": postcode}, {"streetname": streetname}]
@@ -198,7 +198,7 @@ def safe_store_duplicates(db_collection, duplicates):
         db_collection.insert_one(document)
          
 #compares the given duplicates with my duplicates
-def compare_duplicates(db_given_duplicates, db_my_duplicates):
+def compare_duplicates(db_collection, db_given_duplicates, db_my_duplicates):
     
     correctly_recognized_duplicates = []
     incorrectly_recognized_duplicates = []
@@ -209,9 +209,11 @@ def compare_duplicates(db_given_duplicates, db_my_duplicates):
                               'id_1': 1, 
                               'id_2': 1}}
                ]
-    my_dupl = list(db_my_duplicates.aggregate(pipeline))
-    given_dupl = list(db_given_duplicates.aggregate(pipeline))
+    my_dupl = list(db_my_duplicates.aggregate(pipeline))   #getting my duplicates
+    given_dupl = list(db_given_duplicates.aggregate(pipeline))   #getting the given duplicates
     my_print("\nrecognized duplicates: " + str(len(my_dupl)))
+    
+    #writting the duplicates in the corresponding list
     for my_doc in my_dupl:
         if my_doc in given_dupl:
             correctly_recognized_duplicates.append(my_doc)
@@ -222,39 +224,50 @@ def compare_duplicates(db_given_duplicates, db_my_duplicates):
         if giv_doc not in my_dupl:
             unrecognised_duplicates.append(giv_doc)
     
+    #calculation of the different measurements
+    data_sets = len(list(db_collection.find()))
+    posible_pairs = 0.5 * (data_sets * data_sets - data_sets)
     len_md = len(my_dupl)
-    len_gd = len(given_dupl)
-    len_cr = len(correctly_recognized_duplicates)
-    len_ir = len(incorrectly_recognized_duplicates)
-    len_ud = len(unrecognised_duplicates)
-    precision = len_cr / len_md * 100
-    recall = len_cr / len_gd * 100
+    p = len(given_dupl)
+    n = posible_pairs - p
+    tp = len(correctly_recognized_duplicates)
+    fp = len(incorrectly_recognized_duplicates)
+    fn = len(unrecognised_duplicates)
+    tn = n - fp
+    precision = tp / len_md * 100
+    recall = tp / p * 100
+    f_score = 2 * (precision * recall) / (precision + recall)
+    accuracy = ((tp + tn)/(tp + tn + fp + fn)) * 100
+    balanced_accuracy = (((tp / p) + (tn / (tn + fp))) / 2) * 100
     
-    my_print("\ncorrectly recognized duplicates: " + str(len_cr))
-    my_print("\nincorrectly_recognized_duplicates: " + str(len_ir))
+    my_print("\ncorrectly recognized duplicates: " + str(tp))
+    my_print("\nincorrectly_recognized_duplicates: " + str(fp))
     for doc in incorrectly_recognized_duplicates:
         my_print(str(doc))
-    my_print("\nunrecognised_duplicates: (length: " + str(len_ud) + ")")
+    my_print("\nunrecognised_duplicates: (length: " + str(fn) + ")")
     for doc in unrecognised_duplicates:
         my_print(str(doc))
         
     my_print("\n")
-    my_print("==============================")
-    my_print("Precision: " + str(round(precision, 2)) + "% " + rate_recall_and_precision(precision))
-    my_print("Recall: " + str(round(recall, 2)) + "% " + rate_recall_and_precision(recall))
-    my_print("==============================")
+    my_print("========================================")
+    my_print("Precision: " + str(round(precision, 2)) + "% " + rate_result(precision))
+    my_print("Recall: " + str(round(recall, 2)) + "% " + rate_result(recall))
+    my_print("F-Score: " + str(round(f_score, 2)) + "% " + rate_result(f_score))
+    #my_print("Accuracy: " + str(round(accuracy, 10)) + "% ")
+    my_print("Balanced Accuracy: " + str(round(balanced_accuracy, 2)) + "% " + rate_result(balanced_accuracy))
+    my_print("========================================")
     my_print("\n")
     my_print("\n")
     
     
-def rate_recall_and_precision(value):
-    if value >= 99:
+def rate_result(value):
+    if value >= 97.5:
         return "(very high)"
     if value >= 95:
         return "(high)"
-    if value >= 90:
+    if value >= 92.5:
         return "(average)"
-    if value >= 85:
+    if value >= 90:
         return "(low)"
     else:
         return "(very low)"
