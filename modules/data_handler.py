@@ -1,6 +1,6 @@
 # data_handler.py - Getting input from csv, writing data into MongoDB, getting data from MongoDB 
 
-import csv, os, pymongo, pprint, json, re
+import csv, os, pymongo, json, re, sys
 
 
 #reads in csv file and gives it back as a list
@@ -10,7 +10,7 @@ def get_data(adress, my_delimiter):
         reader = csv.reader(csvFile, delimiter = my_delimiter)
         for row in reader:
             data.append(row)
-    print("Got " + str(len(data)) + " lines of data from " + adress)
+    print("Got " + str(len(data)) + " lines of data from " + adress, flush=True)
     return data
     
 #gives back the mongodb-connection to a given database
@@ -20,7 +20,7 @@ def get_db(db_name, collection_name):
     client = pymongo.MongoClient("mongodb://Alex:geheim21@cluster0-shard-00-00-ufyat.gcp.mongodb.net:27017,cluster0-shard-00-01-ufyat.gcp.mongodb.net:27017,cluster0-shard-00-02-ufyat.gcp.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&w=majority")
     db = client[db_name]    
     db_col = db[collection_name]
-    print("Got DB-Connection " + db_col.full_name)
+    print("Got DB-Connection " + db_col.full_name, flush=True)
     return db_col
     
 #stores given data-list in a given collection in the db
@@ -43,7 +43,7 @@ def store_in_database(db_collection, data):
         db_collection.insert_one(new_document)
         insert_count = insert_count + 1
         
-    print("Inserted " + str(insert_count) + " documents into " + db_collection.full_name)
+    print("Inserted " + str(insert_count) + " documents into " + db_collection.full_name, flush=True)
     
 #updates the given documents in the given connection using the Id field
 def update_database(db_collection, data):
@@ -51,7 +51,7 @@ def update_database(db_collection, data):
     for document in data:
         db_collection.replace_one({"_id": document["_id"]},document)
         update_count = update_count + 1
-    print("Updated " + str(update_count) + " documents in " + db_collection.full_name)    
+    print("Updated " + str(update_count) + " documents in " + db_collection.full_name, flush=True)    
 
 #cleans the field phone
 def clean_phone(db_collection):
@@ -64,7 +64,7 @@ def clean_phone(db_collection):
         phone = row["phone"].split("/")
         row["phone"] = phone[0] + "-" + phone[1]
     update_database(db_collection, data)
-    print("Cleaned the field phone")
+    print("Cleaned the field phone", flush=True)
     
 #cleans the field city
 def clean_city(db_collection):
@@ -81,7 +81,7 @@ def clean_city(db_collection):
     for row in data:
         row["city"] = "new york"
     update_database(db_collection,data)
-    print("Cleaned the field city")
+    print("Cleaned the field city", flush=True)
 
 #cleans the field address
 def clean_address(db_collection):
@@ -92,13 +92,19 @@ def clean_address(db_collection):
         postcode = re.findall("^\d+", address)   #gives back the first digits as postcode
         if postcode != []:
             postcode = postcode[0]
-        streetname = address[len(postcode): 11 + len(postcode)].lstrip()
-        address_key = str(postcode) + str(streetname)
+        else:
+            postcode = "0"
+        streetname = address[len(postcode):].lstrip()
+        if re.findall("^[wesn][.]\s", streetname):
+            streetname = streetname[3:]
+        streetname = streetname[ :11].strip()
+        
+        address_key = str(postcode) + " " + str(streetname)
         #address_tupel = [{"postcode": postcode}, {"streetname": streetname}]
         row["address"] = address_key
         
     update_database(db_collection, data)    
-    print("Cleaned the field address")
+    print("Cleaned the field address", flush=True)
 
 #cleans the field type
 def clean_type(db_collection):
@@ -108,7 +114,7 @@ def clean_type(db_collection):
         row["type"] = row["type"].split()[0].strip()
     
     update_database(db_collection, data)    
-    print("Cleaned the field type")
+    print("Cleaned the field type", flush=True)
     
 #help function for find_duplicates. Returns a list with the names of multiple entries of the passed field name
 def find_multiple_entries(db_collection, field_name):
@@ -155,7 +161,7 @@ def find_duplicates(db_collection, search_list):
             for l in remove:
                 duplicates.pop(l)
                 
-    print("Found " + str(len(duplicates)) + " duplicates for input " + str(search_list))
+    print("Found " + str(len(duplicates)) + " duplicates for input " + str(search_list), flush=True)
     return duplicates
         
 #stores the duplicate-pairs unique
@@ -195,7 +201,7 @@ def compare_duplicates(db_given_duplicates, db_my_duplicates):
                ]
     my_dupl = list(db_my_duplicates.aggregate(pipeline))
     given_dupl = list(db_given_duplicates.aggregate(pipeline))
-    print("\nrecognized duplicates: " + str(len(my_dupl)))
+    print("\nrecognized duplicates: " + str(len(my_dupl)), flush=True)
     for my_doc in my_dupl:
         if my_doc in given_dupl:
             correctly_recognized_duplicates.append(my_doc)
@@ -214,16 +220,28 @@ def compare_duplicates(db_given_duplicates, db_my_duplicates):
     precision = len_cr / len_md * 100
     recall = len_cr / len_gd * 100
     
-    print("\ncorrectly recognized duplicates: " + str(len_cr))
-    print("\nincorrectly_recognized_duplicates: " + str(len_ir))
+    print("\ncorrectly recognized duplicates: " + str(len_cr), flush=True)
+    print("\nincorrectly_recognized_duplicates: " + str(len_ir), flush=True)
     for doc in incorrectly_recognized_duplicates:
-        print(str(doc))
-    print("\nunrecognised_duplicates: (length: " + str(len_ud) + ")")
+        print(str(doc), flush=True)
+    print("\nunrecognised_duplicates: (length: " + str(len_ud) + ")", flush=True)
     for doc in unrecognised_duplicates:
-        print(str(doc))
+        print(str(doc), flush=True)
         
-    print("\nPrecision: " + str(round(precision, 2)) + "%")
-    print("Recall: " + str(round(recall, 2)) + "%")
+    print("\nPrecision: " + str(round(precision, 2)) + "% " + rate_recall_and_precision(precision), flush=True)
+    print("Recall: " + str(round(recall, 2)) + "% " + rate_recall_and_precision(recall), flush=True)
         
+    
+def rate_recall_and_precision(value):
+    if value >= 99:
+        return "(very high)"
+    if value >= 95:
+        return "(high)"
+    if value >= 90:
+        return "(average)"
+    if value >= 85:
+        return "(low)"
+    else:
+        return "(very low)"
     
     
