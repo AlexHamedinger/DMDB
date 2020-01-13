@@ -2,3 +2,4 @@ pipeline.py
 modules/__pycache__/
 __pycache__/
 report/
+start_all_apps.bat

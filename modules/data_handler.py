@@ -100,6 +100,16 @@ def clean_address(db_collection):
     update_database(db_collection, data)    
     print("Cleaned the field address")
 
+#cleans the field type
+def clean_type(db_collection):
+    pipeline = [{'$match': {'type': {'$regex': '[(]'}}}]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        row["type"] = row["type"].split()[0].strip()
+    
+    update_database(db_collection, data)    
+    print("Cleaned the field type")
+    
 #help function for find_duplicates. Returns a list with the names of multiple entries of the passed field name
 def find_multiple_entries(db_collection, field_name):
     pipeline = [
@@ -195,14 +205,25 @@ def compare_duplicates(db_given_duplicates, db_my_duplicates):
     for giv_doc in given_dupl:
         if giv_doc not in my_dupl:
             unrecognised_duplicates.append(giv_doc)
-            
-    print("\ncorrectly recognized duplicates: (length: " + str(len(correctly_recognized_duplicates)) + ")")
-    print("\nincorrectly_recognized_duplicates: (length: " + str(len(incorrectly_recognized_duplicates)) + ")")
+    
+    len_md = len(my_dupl)
+    len_gd = len(given_dupl)
+    len_cr = len(correctly_recognized_duplicates)
+    len_ir = len(incorrectly_recognized_duplicates)
+    len_ud = len(unrecognised_duplicates)
+    precision = len_cr / len_md * 100
+    recall = len_cr / len_gd * 100
+    
+    print("\ncorrectly recognized duplicates: " + str(len_cr))
+    print("\nincorrectly_recognized_duplicates: " + str(len_ir))
     for doc in incorrectly_recognized_duplicates:
         print(str(doc))
-    print("\nunrecognised_duplicates: (length: " + str(len(unrecognised_duplicates)) + ")")
+    print("\nunrecognised_duplicates: (length: " + str(len_ud) + ")")
     for doc in unrecognised_duplicates:
         print(str(doc))
+        
+    print("\nPrecision: " + str(round(precision, 2)) + "%")
+    print("Recall: " + str(round(recall, 2)) + "%")
         
     
     
