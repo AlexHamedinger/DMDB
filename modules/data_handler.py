@@ -1,5 +1,3 @@
-# data_handler.py - Getting input from csv, writing data into MongoDB, getting data from MongoDB 
-
 import csv, os, pymongo, json, re, sys, time
 
 def my_print(message):
@@ -11,27 +9,36 @@ def my_print(message):
     for line in message:
         timestamp = time.strftime("%d.%m.%Y %H:%M:%S", time.localtime()) 
         line = timestamp + ": " + line
-        print(line, file=open("find_duplicates.log", "a"), flush=True)
+        print(line, file=open("duplicates.log", "a"), flush=True)
 
 #reads in csv file and gives it back as a list
-def get_data(adress, my_delimiter):
+def get_data(file_adress, my_delimiter):
     data = []
-    with open(adress, 'r') as csvFile:
-        reader = csv.reader(csvFile, delimiter = my_delimiter)
+    with open(file_adress, 'r') as csvFile:
+        reader = csv.reader(csvFile, 
+                 delimiter = my_delimiter)
         for row in reader:
             data.append(row)
-    my_print("Got " + str(len(data)) + " lines of data from " + adress)
+    my_print("Got " + str(len(data)) + " lines of data from " + file_adress)
     return data
     
 #gives back the mongodb-connection to a given database
-def get_db(db_name, collection_name):
+def get_collection(db_name, collection_name):
     from pymongo import MongoClient
-    
-    client = pymongo.MongoClient("mongodb://Alex:geheim21@cluster0-shard-00-00-ufyat.gcp.mongodb.net:27017,cluster0-shard-00-01-ufyat.gcp.mongodb.net:27017,cluster0-shard-00-02-ufyat.gcp.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&w=majority")
+    connection_string = ""
+    row = 0
+    with open("database.conf") as config:
+        for line in config:
+            if row > 0:
+                break
+            connection_string = line.strip()
+            row = row + 1
+ 
+    client = pymongo.MongoClient(connection_string)
     db = client[db_name]    
-    db_col = db[collection_name]
-    my_print("Got DB-Connection " + db_col.full_name)
-    return db_col
+    db_collection = db[collection_name]
+    my_print("Got DB-Connection " + db_collection.full_name)
+    return db_collection
     
 #stores given data-list in a given collection in the db
 def store_in_database(db_collection, data):
@@ -41,18 +48,16 @@ def store_in_database(db_collection, data):
         data[0][0] = "_id"
     dataIterator = iter(data)
     
-    #reading the first row (contains header data)
+    #reading the first row (contains header)
     header = next(dataIterator)
     insert_count = 0
-    
-    #writing every row of the list into the MongoDB
+    #writing every row of the list to MongoDB
     for row in dataIterator:
-        #building a dictionary out of the header and the row
+        #building a dictionary
         new_document = (dict(zip(header, row)))
         #storing the dictionary in the DB
         db_collection.insert_one(new_document)
         insert_count = insert_count + 1
-        
     my_print("Inserted " + str(insert_count) + " documents into " + db_collection.full_name + "\n")
     
 #updates the given documents in the given connection using the Id field
@@ -67,19 +72,19 @@ def update_database(db_collection, data):
 def clean_phone(db_collection):
     #replaces the "/" with "-"
     pipeline = [
-                {'$match': {'phone': {'$regex': '[0-9]{3}/[0-9]{3}-[0-9]{4}'}}}
+                {'$match': {'phone': {'$regex': '[0-9]{3}/'}}}
                ]
     data = list(db_collection.aggregate(pipeline))
     for row in data:
         phone = row["phone"].split("/")
-        row["phone"] = phone[0] + "-" + phone[1]
+        row["phone"] = phone[0].strip() + "-" + phone[1].strip()
     update_database(db_collection, data)
     my_print("Cleaned the field phone\n")
     
 #cleans the field city
 def clean_city(db_collection):
-    #if the city is "la" it becomes "los angeles"
-    pipeline = [{'$match': {'city': 'la'}}]
+    #if the city is "la",... it becomes "los angeles"
+    pipeline = [{'$match': { '$or': [{'city': 'la'}, {'city': 'santa monica'}, {'city': 'beverly hills'}, {'city': 'hollywood'}, {'city': 'w. hollywood'}, {'city': 'pasadena'}]}}]
     data = list(db_collection.aggregate(pipeline))
     for row in data:
         row["city"] = "los angeles"
@@ -106,11 +111,27 @@ def clean_address(db_collection):
             postcode = "0"
         streetname = address[len(postcode):].lstrip()
         if re.findall("^[wesn][.]\s", streetname):
-            streetname = streetname[3:]
+            streetname = streetname[3:]        
+        
+        if re.findall("^[0-9]th", streetname):
+            number = streetname[0]
+            if number == "4":
+                streetname = "fourth" + streetname[3:]
+            if number == "5":
+                streetname = "fifth" + streetname[3:]
+            if number == "6":
+                streetname = "sixth" + streetname[3:]
+            if number == "7":
+                streetname = "seventh" + streetname[3:]    
+            if number == "8":
+                streetname = "eighth" + streetname[3:]
+            if number == "9":
+                streetname = "ninth" + streetname[3:]
+                
         streetname = streetname[ :5].strip()
         
-        address_key = str(postcode) + " " + str(streetname)
-        #address_tupel = [{"postcode": postcode}, {"streetname": streetname}]
+        address_key = str(postcode) + "-" + str(streetname)
+        address_tupel = [{"postcode": postcode}, {"streetname": streetname}]
         row["address"] = address_key
         
     update_database(db_collection, data)    
@@ -123,21 +144,44 @@ def clean_type(db_collection):
     for row in data:
         row["type"] = row["type"].split()[0].strip()
     
-    update_database(db_collection, data)    
+    update_database(db_collection, data)  
+    
+    #if the type is "bbq",... it becomes "american"
+    pipeline = [{'$match': { '$or': [{'type': 'bbq'}, {'type': 'californian'}, {'type': 'southwestern'}]}}]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        row["type"] = "american"
+    update_database(db_collection,data)
+    
+    #if the type is "chinese",... it becomes "american"
+    pipeline = [{'$match': { '$or': [{'type': 'chinese'}, {'type': 'japanese'}, {'type': 'indian'}]}}]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        row["type"] = "asian"
+    update_database(db_collection,data)
+    
+    #if the type is "delis" it becomes "delicatessen"
+    pipeline = [{'$match': {'type': 'delis'}}]
+    data = list(db_collection.aggregate(pipeline))
+    for row in data:
+        row["type"] = "delicatessen"
+    update_database(db_collection,data)
+    
     my_print("Cleaned the field type\n")
     
-#help function for find_duplicates. Returns a list with the names of multiple entries of the passed field name
+#helper function for find_duplicates. Returns a list with the names of multiple entries of the passed field name
 def find_multiple_entries(db_collection, field_name):
+
     pipeline = [
-                    {'$group': {'_id': '$' + field_name, 
-                                'count': {'$sum': 1}}}, 
-                    {'$match': {'count': {'$gt': 1}}}, 
-                    {'$sort': {'count': -1, 
-                                '_id': 1}}, 
-                    {'$project': {'_id': 0, 
-                                  field_name: '$_id', 
-                                  'count': 1}}
-                   ]
+                {'$group': {'_id': '$' + field_name, 
+                            'count': {'$sum': 1}}}, 
+                {'$match': {'count': {'$gt': 1}}}, 
+                {'$sort': {'count': -1, 
+                            '_id': 1}}, 
+                {'$project': {'_id': 0, 
+                              field_name: '$_id', 
+                              'count': 1}}
+               ]
             
     return list(db_collection.aggregate(pipeline))
 
@@ -147,17 +191,18 @@ def find_duplicates(db_collection, search_list):
     
     for i in range(len(search_list)):  #iterates through search list (to get fieldnames)
         duplicates_cache = []
-        grouped_duplicates = find_multiple_entries(db_collection, search_list[i])   #finds duplicates for specified fieldname (from search_list)
-        for doc in grouped_duplicates:  #iterates through duplicates-id-list
+        multiple_entries = find_multiple_entries(db_collection, search_list[i])   #finds duplicates for specified fieldname (from search_list)
+        for doc in multiple_entries:  #iterates through duplicates-id-list
             pipeline = [{"$match": {search_list[i]: doc[search_list[i]]}}]  #gets the documents matching the duplicate-fieldname value
             docs = list(db_collection.aggregate(pipeline))
             for j in range(len(docs) - 1):   #iterates through those documents
-                id_1 = docs[j]["_id"]
-                id_2 = docs[j + 1]["_id"]
-                if int(float(id_1)) < int(float(id_2)):  #stores the ids in a list of dictionaries (lower value first)
-                    duplicates_cache.append({"id_1": id_1, "id_2": id_2})
-                elif int(float(id_1)) > int(float(id_2)):
-                    duplicates_cache.append({"id_1": id_2, "id_2": id_1})
+                for ji in range(j, len(docs) - 1):
+                    id_1 = docs[j]["_id"]
+                    id_2 = docs[ji + 1]["_id"]
+                    if int(float(id_1)) < int(float(id_2)):  #stores the ids in a list of dictionaries (lower value first)
+                        duplicates_cache.append({"id_1": id_1, "id_2": id_2})
+                    elif int(float(id_1)) > int(float(id_2)):
+                        duplicates_cache.append({"id_1": id_2, "id_2": id_1})
         #checks if these duplicates have already been found, and if not saves them in the list 
         if i == 0:  
             for doc in duplicates_cache:            
@@ -198,7 +243,7 @@ def safe_store_duplicates(db_collection, duplicates):
         db_collection.insert_one(document)
          
 #compares the given duplicates with my duplicates
-def compare_duplicates(db_collection, db_given_duplicates, db_my_duplicates):
+def compare_to_gold(db_collection, db_gold_duplicates, db_classifier_duplicates):
     
     correctly_recognized_duplicates = []
     incorrectly_recognized_duplicates = []
@@ -209,8 +254,8 @@ def compare_duplicates(db_collection, db_given_duplicates, db_my_duplicates):
                               'id_1': 1, 
                               'id_2': 1}}
                ]
-    my_dupl = list(db_my_duplicates.aggregate(pipeline))   #getting my duplicates
-    given_dupl = list(db_given_duplicates.aggregate(pipeline))   #getting the given duplicates
+    my_dupl = list(db_classifier_duplicates.aggregate(pipeline))   #getting my duplicates
+    given_dupl = list(db_gold_duplicates.aggregate(pipeline))   #getting the given duplicates
     my_print("\nrecognized duplicates: " + str(len(my_dupl)))
     
     #writting the duplicates in the corresponding list
@@ -235,18 +280,19 @@ def compare_duplicates(db_collection, db_given_duplicates, db_my_duplicates):
     fn = len(unrecognised_duplicates)
     tn = n - fp
     precision = tp / len_md * 100
-    recall = tp / p * 100
+    recall = tp / p * 100 # or tpr
+    tnr = tn / n * 100
     f_score = 2 * (precision * recall) / (precision + recall)
     accuracy = ((tp + tn)/(tp + tn + fp + fn)) * 100
-    balanced_accuracy = (((tp / p) + (tn / (tn + fp))) / 2) * 100
+    balanced_accuracy = (((tp / p) + (tn / (tn + fp))) / 2) * 100   #or (tpr + tnr) / 2
     
-    my_print("\ncorrectly recognized duplicates: " + str(tp))
-    my_print("\nincorrectly_recognized_duplicates: " + str(fp))
-    for doc in incorrectly_recognized_duplicates:
-        my_print(str(doc))
-    my_print("\nunrecognised_duplicates: (length: " + str(fn) + ")")
-    for doc in unrecognised_duplicates:
-        my_print(str(doc))
+    my_print("\ncorrectly recognized duplicates (TP): " + str(tp))
+    my_print("\nincorrectly_recognized_duplicates (FP): " + str(fp))
+    #for doc in incorrectly_recognized_duplicates:
+    #    my_print(str(doc))
+    my_print("\nunrecognized_duplicates (FN): " + str(fn))
+    #for doc in unrecognised_duplicates:
+    #    my_print(str(doc))
         
     my_print("\n")
     my_print("========================================")
@@ -259,15 +305,15 @@ def compare_duplicates(db_collection, db_given_duplicates, db_my_duplicates):
     my_print("\n")
     my_print("\n")
     
-    
+#helper function for compare_to_gold    
 def rate_result(value):
     if value >= 97.5:
         return "(very high)"
-    if value >= 95:
-        return "(high)"
     if value >= 92.5:
+        return "(high)"
+    if value >= 87.5:
         return "(average)"
-    if value >= 90:
+    if value >= 82.5:
         return "(low)"
     else:
         return "(very low)"

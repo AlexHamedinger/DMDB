@@ -1,0 +1,112 @@
+16.01.2020 00:33:37: STEP 1: Load data from files...
+16.01.2020 00:33:37: Got 865 lines of data from restaurant_data/restaurants.tsv
+16.01.2020 00:33:37: Got DB-Connection dmdb_project.restaurant_data
+16.01.2020 00:34:48: Inserted 864 documents into dmdb_project.restaurant_data
+16.01.2020 00:34:48: 
+16.01.2020 00:34:48: Got 113 lines of data from restaurant_data/restaurants_DPL.tsv
+16.01.2020 00:34:48: Got DB-Connection dmdb_project.restaurant_gold_duplicates
+16.01.2020 00:34:52: Inserted 112 documents into dmdb_project.restaurant_gold_duplicates
+16.01.2020 00:34:52: 
+16.01.2020 00:34:52: Got DB-Connection dmdb_project.restaurant_classifier_duplicates
+16.01.2020 00:34:52: 
+16.01.2020 00:34:52: 
+16.01.2020 00:34:52: STEP 2: Clean the fields...
+16.01.2020 00:35:11: Updated 533 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:11: Cleaned the field phone
+16.01.2020 00:35:11: 
+16.01.2020 00:35:13: Updated 51 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:16: Updated 88 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:16: Cleaned the field city
+16.01.2020 00:35:16: 
+16.01.2020 00:35:47: Updated 864 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:47: Cleaned the field address
+16.01.2020 00:35:47: 
+16.01.2020 00:35:48: Updated 48 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:50: Updated 39 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:51: Updated 33 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:51: Updated 6 documents in dmdb_project.restaurant_data
+16.01.2020 00:35:51: Cleaned the field type
+16.01.2020 00:35:51: 
+16.01.2020 00:35:51: 
+16.01.2020 00:35:51: 
+16.01.2020 00:35:51: STEP 3: Find duplicates and evaluate them...
+16.01.2020 00:39:04: 
+16.01.2020 00:39:12: Found 73 duplicates for input ['name', 'address', 'city']
+16.01.2020 00:39:24: Found 72 duplicates for input ['name', 'address', 'phone']
+16.01.2020 00:39:35: Found 46 duplicates for input ['name', 'address', 'type']
+16.01.2020 00:39:45: Found 79 duplicates for input ['name', 'city', 'phone']
+16.01.2020 00:39:54: Found 52 duplicates for input ['name', 'city', 'type']
+16.01.2020 00:40:05: Found 52 duplicates for input ['name', 'phone', 'type']
+16.01.2020 00:40:16: Found 109 duplicates for input ['address', 'city', 'phone']
+16.01.2020 00:40:28: Found 62 duplicates for input ['address', 'city', 'type']
+16.01.2020 00:40:41: Found 58 duplicates for input ['address', 'phone', 'type']
+16.01.2020 00:40:52: Found 65 duplicates for input ['city', 'phone', 'type']
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: recognized duplicates: 128
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: correctly recognized duplicates (TP): 109
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: incorrectly_recognized_duplicates (FP): 19
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: unrecognized_duplicates (FN): 3
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: ========================================
+16.01.2020 00:40:57: Precision: 85.16% (low)
+16.01.2020 00:40:57: Recall: 97.32% (high)
+16.01.2020 00:40:57: F-Score: 90.83% (average)
+16.01.2020 00:40:57: Balanced Accuracy: 98.66% (very high)
+16.01.2020 00:40:57: ========================================
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: 
+16.01.2020 00:40:57: 
+16.01.2020 00:41:09: Found 71 duplicates for input ['name', 'address', 'city', 'phone']
+16.01.2020 00:41:21: Found 46 duplicates for input ['name', 'address', 'city', 'type']
+16.01.2020 00:41:35: Found 46 duplicates for input ['name', 'address', 'phone', 'type']
+16.01.2020 00:41:49: Found 57 duplicates for input ['type', 'address', 'city', 'phone']
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: recognized duplicates: 82
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: correctly recognized duplicates (TP): 81
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: incorrectly_recognized_duplicates (FP): 1
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: unrecognized_duplicates (FN): 31
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: ========================================
+16.01.2020 00:41:52: Precision: 98.78% (very high)
+16.01.2020 00:41:52: Recall: 72.32% (very low)
+16.01.2020 00:41:52: F-Score: 83.51% (low)
+16.01.2020 00:41:52: Balanced Accuracy: 86.16% (low)
+16.01.2020 00:41:52: ========================================
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: 
+16.01.2020 00:41:52: 
+16.01.2020 00:42:00: Found 73 duplicates for input ['name', 'address', 'city']
+16.01.2020 00:42:12: Found 58 duplicates for input ['address', 'phone', 'type']
+16.01.2020 00:42:22: Found 80 duplicates for input ['name', 'phone']
+16.01.2020 00:42:31: Found 52 duplicates for input ['name', 'city', 'type']
+16.01.2020 00:42:42: Found 65 duplicates for input ['city', 'phone', 'type']
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: recognized duplicates: 96
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: correctly recognized duplicates (TP): 95
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: incorrectly_recognized_duplicates (FP): 1
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: unrecognized_duplicates (FN): 17
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: ========================================
+16.01.2020 00:42:46: Precision: 98.96% (very high)
+16.01.2020 00:42:46: Recall: 84.82% (low)
+16.01.2020 00:42:46: F-Score: 91.35% (average)
+16.01.2020 00:42:46: Balanced Accuracy: 92.41% (average)
+16.01.2020 00:42:46: ========================================
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: 
+16.01.2020 00:42:46: 
